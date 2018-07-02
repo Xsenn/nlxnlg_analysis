@@ -208,7 +208,8 @@ poshd = atan2(posy2 - posy, posx2 - posx);
 dt = mean(diff(Timestamps.*1e-6));
 vx = diff([posx_c(1) posx_c]);
 vy = diff([posy_c(1) posy_c]);
-speed = sqrt(vx.^2 + vy.^2)*(1/dt);
+speed = sqrt(vx.^2 + vy.^2)./dt;
+angVel = diff([poshd(1) poshd])./dt;
 
 % save raw data
 raw.timestamps = Timestamps';
@@ -222,6 +223,7 @@ raw.poshd = poshd';
 raw.vx = vx';
 raw.vy = vy';
 raw.speed = speed;
+raw.angVel = angVel;
 
 %% smoothing
 filter_length = 10;
@@ -257,7 +259,8 @@ poshd = atan2(posy2 - posy, posx2 - posx);
 dt = mean(diff(Timestamps.*1e-6));
 vx = diff([posx_c(1) posx_c]);
 vy = diff([posy_c(1) posy_c]);
-speed = sqrt(vx.^2 + vy.^2)*(1/dt);
+speed = sqrt(vx.^2 + vy.^2)./dt;
+angVel = diff([poshd(1) poshd])./dt;
 
 % save smoothed data
 vt.timestamps = Timestamps';
@@ -271,6 +274,7 @@ vt.poshd = poshd';
 vt.vx = vx';
 vt.vy = vy';
 vt.speed = speed';
+vt.angVel = angVel';
 
 %% save data
 % save arena marking data
@@ -278,7 +282,7 @@ VT_ArenaMarking.min_x = minx;
 VT_ArenaMarking.min_y = miny;
 VT_ArenaMarking.max_x = maxx;
 VT_ArenaMarking.max_y = maxy;
-VT_ArenaMarking.px2cm = px2cm ;
+VT_ArenaMarking.px2cm = px2cm;
 
 % Save the Parameters:
 VT_Parameters.recording_day = Day ;

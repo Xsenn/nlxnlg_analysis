@@ -2,14 +2,14 @@
 subplot(m, n, count);
 
 % find channel with maximum value
-[~, maxChan] = max(max(mean(c.spikeShape, 3)));
+[~, maxChan] = max(max(mean(spikeShape, 3)));
 otherChannels = setdiff([1:4], maxChan);
 
 % plot only mean of spikes
-plot(mean(squeeze(c.spikeShape(:, maxChan, :)), 2));
+plot(mean(squeeze(spikeShape(:, maxChan, :)), 2));
 hold on
 for jjChan = otherChannels
-    plot(mean(squeeze(c.spikeShape(:, jjChan, :)), 2));
+    plot(mean(squeeze(spikeShape(:, jjChan, :)), 2));
 end
 
 xlabel('Time (ms)');

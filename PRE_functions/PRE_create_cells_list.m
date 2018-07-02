@@ -85,39 +85,39 @@ for ii_exp = 1:length(P)
             end
             
             cn = unique(CellNumbers(CellNumbers ~= 0)); % find all non-zero cell numbers
-            ad2uv = header{}; % get ADC2uV values
+%             ad2uv = header{}; % get ADC2uV values
             
             %% loop over cells in CellNumbers
             for ii_cell = cn
 %                 fprintf(repmat('\b',1,line));
                 fprintf('%i - animal %i%s, Day %i, TT%iC%i\n',...
                     curr_cell, p.animal, p.animal_name, p.day, ii_tetrode, ii_cell);
+                
                 % create new cells line
-                c = struct;
+                metaData = struct;
                 
-                c.cell_number = curr_cell;
-                c.animal = p.animal;
-                c.animal_name = p.animal_name;
-                c.day = p.day;
-                c.experiment = p.experiment;
-                c.session = ii_nses;
-                c.TT = ii_tetrode;
-                c.cell_id = ii_cell;
-                c.p = p;
+                metaData.cell_number = curr_cell;
+                metaData.animal = p.animal;
+                metaData.animal_name = p.animal_name;
+                metaData.day = p.day;
+                metaData.experiment = p.experiment;
+                metaData.session = ii_nses;
+                metaData.TT = ii_tetrode;
+                metaData.cell_id = ii_cell;  
                 
-                excel_line = table2cell(struct2table(c)); % create line to append to excel file
+                excel_line = table2cell(struct2table(metaData)); % create line to append to excel file
                 
                 %% interpolate spikes
-                c.spikePos = interp_spikes(c, Timestamps, CellNumbers, ii_cell, orgVt, p);
+                spikePos = interp_spikes(Timestamps, CellNumbers, ii_cell, orgVt, p);
                 
                 % get only current session video info
-                c.sessionPos = session_video(sessionStartTime, sessionEndTime, orgVt);
+                sessionPos = session_video(sessionStartTime, sessionEndTime, orgVt);
                 
                 % claculate spike train
 %                 c = spike_train(c, Timestamps, CellNumbers, ii_cell, vt);
                 
                 % get spike shape
-                c.spikeShape = Samples(:, :, CellNumbers == ii_cell);
+                spikeShape = Samples(:, :, CellNumbers == ii_cell);
                 
                 %% save cell file and update excel sheet
                 
@@ -133,7 +133,7 @@ for ii_exp = 1:length(P)
                 
                 % create filename structure
                 outfile_name = sprintf('%i_%i-%s_%s_Day%d_Exp%i_Session%i_TT%i_Cell%i.mat',...
-                    c.cell_number, p.animal, p.animal_name, p.nlgnlx, p.day, p.experiment, ii_nses, ii_tetrode, ii_cell);
+                    metaData.cell_number, p.animal, p.animal_name, p.nlgnlx, p.day, p.experiment, ii_nses, ii_tetrode, ii_cell);
     
                 outfile_FULL = fullfile(p.path_dataout,...
                     'Cells',...
@@ -155,14 +155,14 @@ for ii_exp = 1:length(P)
                 elseif ~exist(outfile_FULL, 'file') && any(strcmp(current_cell_string, existing_cells))
                     
                     % save file but don't update excel
-                    save(outfile_FULL,  'c');
+                    save(outfile_FULL, 'metaData', 'spikePos', 'sessionPos', 'p', 'spikeShape');
                     
                     % no file AND no excel
                 elseif ~exist(outfile_FULL, 'file') && ~any(strcmp(current_cell_string, existing_cells))
                     
                     % save file and update excel
                     xlswrite(excel_file, excel_line, 'Cells', sprintf('A%i', curr_cell+1));
-                    save(outfile_FULL,  'c');
+                    save(outfile_FULL, 'metaData', 'spikePos', 'sessionPos', 'p', 'spikeShape');
                     
                 end
                 
@@ -180,7 +180,7 @@ end % experiment
 
 end
 
-function c = interp_spikes(c, ts, cn, cell, vt, p)
+function spikePos = interp_spikes(ts, cn, cell, vt, p)
 dbstop if error
 %% INTERPSPIKES interpolates spike values
 %   c - cell structure to update
@@ -190,40 +190,41 @@ dbstop if error
 %   vt - video data
 
 if strcmpi(p.nlgnlx, 'nlg')
-    c.timestamps = ts(cn == cell)' + polyval(p.nlg.align_timestamps_nlg2nlx.p,...
+    spikePos.timestamps = ts(cn == cell)' + polyval(p.nlg.align_timestamps_nlg2nlx.p,...
         ts(cn == cell)',...
         p.nlg.align_timestamps_nlg2nlx.S,...
         p.nlg.align_timestamps_nlg2nlx.mu);
-else, c.timestamps = ts(cn == cell)';
+else, spikePos.timestamps = ts(cn == cell)';
 end
 
-if any(p.throw_away_times)
-    idxToRemove = PRE_throw_away_times(c.timestamps, p.throw_away_times);
-    c.timestamps(idxToRemove) = [];
-end
+% if any(p.throw_away_times)
+%     idxToRemove = PRE_throw_away_times(metaData.timestamps, p.throw_away_times);
+%     metaData.timestamps(idxToRemove) = [];
+% end
 
-c.posx       = interp1(vt.timestamps, vt.posx, c.timestamps);
-c.posx2      = interp1(vt.timestamps, vt.posx2, c.timestamps);
-c.posy       = interp1(vt.timestamps, vt.posy, c.timestamps);
-c.posy2      = interp1(vt.timestamps, vt.posy2, c.timestamps);
-c.posx_c     = interp1(vt.timestamps, vt.posx_c, c.timestamps);
-c.posy_c     = interp1(vt.timestamps, vt.posy_c, c.timestamps);
-c.poshd      = interp1(vt.timestamps, vt.poshd, c.timestamps);
-c.vx         = interp1(vt.timestamps, vt.vx, c.timestamps);
-c.vy         = interp1(vt.timestamps, vt.vy, c.timestamps);
-c.speed      = interp1(vt.timestamps, vt.speed, c.timestamps);
+spikePos.posx       = interp1(vt.timestamps, vt.posx, spikePos.timestamps);
+spikePos.posx2      = interp1(vt.timestamps, vt.posx2, spikePos.timestamps);
+spikePos.posy       = interp1(vt.timestamps, vt.posy, spikePos.timestamps);
+spikePos.posy2      = interp1(vt.timestamps, vt.posy2, spikePos.timestamps);
+spikePos.posx_c     = interp1(vt.timestamps, vt.posx_c, spikePos.timestamps);
+spikePos.posy_c     = interp1(vt.timestamps, vt.posy_c, spikePos.timestamps);
+spikePos.poshd      = interp1(vt.timestamps, vt.poshd, spikePos.timestamps);
+spikePos.vx         = interp1(vt.timestamps, vt.vx, spikePos.timestamps);
+spikePos.vy         = interp1(vt.timestamps, vt.vy, spikePos.timestamps);
+spikePos.speed      = interp1(vt.timestamps, vt.speed, spikePos.timestamps);
+spikePos.angVel     = interp1(vt.timestamps, vt.angVel, spikePos.timestamps);
 end
 
 function c = spike_train(c, ts, cn, cell, vt)
 % Calculates the spiketrain
 dt = mean(diff(vt.timestamps));
 timebins = [vt.timestamps; (vt.timestamps(end) + dt)];
-c.spikeTrain = histcounts(ts(cn == cell), timebins)';
+metaData.spikeTrain = histcounts(ts(cn == cell), timebins)';
 
 % Smooths firing rate
 filter = gaussmf(-4:4, [2 0]); filter = filter / sum(filter);
-c.firingRate = c.spikeTrain / dt;
-c.smoothFiringRate = conv(c.firingRate, filter, 'same');
+metaData.firingRate = metaData.spikeTrain / dt;
+metaData.smoothFiringRate = conv(metaData.firingRate, filter, 'same');
 end
 
 function vt = session_video(startTime, endTime, vt)
